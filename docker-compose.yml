@@ -1,0 +1,11 @@
+
+services:
+  postgres_policia:
+    container_name: pg_policia
+    image: postgres
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=1234
+      - POSTGRES_DB=policia_db

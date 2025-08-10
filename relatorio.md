@@ -1,44 +1,134 @@
 <sup>Esse é um feedback gerado por IA, ele pode conter erros.</sup>
 
-Você tem 9 créditos restantes para usar o sistema de feedback AI.
+Você tem 8 créditos restantes para usar o sistema de feedback AI.
 
 # Feedback para fonteBean:
 
-Nota final: **73.3/100**
+Nota final: **0.0/100**
 
-Olá, fonteBean! 👋🚀
+Olá, fonteBean! 👋🚓
 
-Primeiramente, parabéns pelo empenho nessa etapa tão importante do seu projeto! 🎉 Migrar uma API para usar banco de dados real, com Knex, migrations, seeds e tudo mais, não é tarefa trivial. Você conseguiu implementar várias funcionalidades essenciais, e isso é ótimo! 👏
+Antes de mais nada, quero te parabenizar pelo esforço e dedicação em avançar para a etapa de persistência com PostgreSQL e Knex.js! 🎉 Você já implementou várias funcionalidades importantes, como endpoints para filtros complexos e buscas, além de mensagens de erro customizadas — isso mostra que você está realmente se aprofundando na construção de uma API robusta. Mandou bem nos bônus! 👏✨
 
-Além disso, percebi que você implementou alguns recursos bônus muito legais, como a filtragem de casos por status e por agente, que funcionam corretamente. Isso mostra que você está se aprofundando e buscando ir além do básico – continue assim! 💪✨
+Agora, vamos juntos analisar o que está travando a sua nota e como podemos destravar tudo isso para você evoluir ainda mais. Bora? 🕵️‍♂️🔍
 
 ---
 
-## Vamos analisar juntos os pontos que podem ser melhorados para deixar sua API tinindo! 🔎
+## 1. Organização do Projeto: Estrutura de Diretórios
 
-### 1. Uso do Banco de Dados com Knex: o que está acontecendo?
+Eu dei uma olhada na estrutura do seu projeto e percebi que **o arquivo `INSTRUCTIONS.md` está faltando no seu repositório**. Esse arquivo é obrigatório para o desafio e faz parte da estrutura esperada:
 
-Ao analisar seu código, percebi algo muito importante que está impactando diretamente o funcionamento da persistência com PostgreSQL. No seu repositório, os arquivos `agentesRepository.js` e `casosRepository.js` ainda têm funções que manipulam arrays estáticos (em memória), como:
-
-```js
-const agentes = [
-  { id: "401bccf5-cf9e-489d-8412-446cd169a0f1", nome: "Rommel Carneiro", ... },
-  // ...
-];
-
-function findById(id) {
-  const agente = agentes.find(a => a.id === id);
-  return agente;
-}
+```
+📦 SEU-REPOSITÓRIO
+│
+├── package.json
+├── server.js
+├── knexfile.js
+├── INSTRUCTIONS.md   <--- esse arquivo está faltando
+│
+├── db/
+│   ├── migrations/
+│   ├── seeds/
+│   └── db.js
+│
+├── routes/
+│   ├── agentesRoutes.js
+│   └── casosRoutes.js
+│
+├── controllers/
+│   ├── agentesController.js
+│   └── casosController.js
+│
+├── repositories/
+│   ├── agentesRepository.js
+│   └── casosRepository.js
+│
+└── utils/
+    └── errorHandler.js
 ```
 
-E, ao mesmo tempo, você tem tentativas de usar o Knex para buscar dados no banco, como neste trecho:
+Além disso, você recebeu uma penalidade porque o `.gitignore` não está ignorando a pasta `node_modules`. Isso pode deixar seu repositório pesado e desorganizado. Recomendo criar ou ajustar seu `.gitignore` para incluir essa pasta:
+
+```gitignore
+/node_modules
+```
+
+Manter a estrutura correta e o `.gitignore` alinhado é fundamental para que seu projeto seja fácil de entender e rodar para qualquer pessoa (incluindo os avaliadores 😉).
+
+---
+
+## 2. Persistência com PostgreSQL e Knex.js: A Raiz dos Problemas
+
+Agora, vamos falar do que impacta diretamente suas funcionalidades e endpoints: a integração com o banco de dados.
+
+### O que eu percebi no seu código:
+
+- Seus controllers (exemplo: `agentesController.js`) estão chamando funções do `agentesRepository` como se fossem síncronas — usando retorno direto, como:
+
+```js
+let agentes = agentesRepository.findAll();
+```
+
+- Mas no seu repositório, `findAll` é uma função **assíncrona** que retorna uma Promise, pois utiliza Knex para fazer query no banco:
 
 ```js
 async function findAll() {
   try {
     const agentes = db("agentes").select("*");
     return agentes;
+  } catch (err) {
+    console.log(err);
+    return false;
+  }
+}
+```
+
+**Aqui está o ponto crítico:** você esqueceu de usar `await` para esperar a Promise resolver. Sem isso, `agentes` será sempre uma Promise pendente, não o resultado esperado, e isso vai quebrar toda a lógica que depende desses dados.
+
+---
+
+### Exemplo do problema no controller:
+
+```js
+function getAgentes(req, res) {
+  let agentes = agentesRepository.findAll(); // Promise, não dados reais!
+
+  // ... você tenta filtrar e ordenar agentes, mas agentes é uma Promise
+  // Isso causa erros silenciosos e falhas nos endpoints.
+}
+```
+
+### Como corrigir:
+
+Você precisa transformar essas funções em `async` e usar `await` ao chamar o repositório:
+
+```js
+async function getAgentes(req, res) {
+  let agentes = await agentesRepository.findAll();
+
+  // Agora agentes contém o array real de agentes do banco.
+
+  // resto da lógica permanece igual...
+}
+```
+
+Faça isso para **todos os métodos dos controllers que usam funções assíncronas do repositório**, como `findById`, `criarAgente`, `updateAgente`, `deleteAgente`, etc.
+
+---
+
+### Outro ponto na camada de repositório:
+
+No seu `agentesRepository.js` e `casosRepository.js`, você está retornando `false` quando não encontra dados, mas seria melhor retornar `null` ou `undefined` para deixar claro que não há resultado, pois `false` pode confundir a lógica do controller.
+
+Além disso, no método `findById` você não está usando `await` antes da query:
+
+```js
+async function findById(id) {
+  try {
+    const agente = db("agentes").where({id: id}).first(); // falta await aqui!
+    if(!agente) return false;
+
+    return agente
   } catch(err) {
     console.log(err);
     return false;
@@ -46,251 +136,178 @@ async function findAll() {
 }
 ```
 
-O que acontece aqui é que você tem **duas versões da função `findById` no mesmo arquivo** (uma usando array, outra usando Knex), e as funções chamadas nos controllers são as que manipulam os arrays estáticos, **não as que usam o banco**.
-
-Isso gera um efeito cascata:
-
-- Seu código não está realmente consultando o banco de dados.
-- As tabelas e dados do PostgreSQL não são utilizados.
-- Os testes que esperam dados persistidos no banco falham, especialmente os que listam todos os agentes ou fazem buscas filtradas.
-
-**Por quê isso acontece?**
-
-- As funções que retornam dados do banco são `async`, mas você não está usando `await` para esperar o resultado.
-- Você tem duas funções com o mesmo nome (`findById`) no `agentesRepository.js`. A última sobrescreve a anterior, e essa última é a que usa o array.
-- Nos controllers, você chama as funções do repositório como se fossem síncronas, mas as funções que usam o banco são assíncronas.
-
----
-
-### Como corrigir?
-
-Você precisa **remover as funções que manipulam arrays estáticos** e implementar todas as funções do repositório usando Knex com `async/await`. Por exemplo, no `agentesRepository.js`, o `findById` deve ser assim:
+O correto é:
 
 ```js
 async function findById(id) {
   try {
-    const agente = await db('agentes').where({ id }).first();
-    return agente || null;
-  } catch (err) {
-    console.error(err);
+    const agente = await db("agentes").where({id: id}).first();
+    if(!agente) return null;
+
+    return agente;
+  } catch(err) {
+    console.log(err);
     return null;
   }
 }
 ```
 
-E no controller, você deve usar `await` para chamar essa função, e tornar a função do controller `async`:
-
-```js
-async function getAgenteById(req, res) {
-  const agenteId = req.params.id;
-  const agente = await agentesRepository.findById(agenteId);
-  if (!agente) {
-    return errorResponse(res, 404, "Agente não encontrado");
-  }
-  res.status(200).json(agente);
-}
-```
-
-Faça isso para **todas as funções do repositório** que acessam o banco, como `findAll`, `criarAgente`, `updateAgente`, `deleteAgente`, e também para os casos no `casosRepository.js`.
+Esse detalhe é crucial para garantir que você realmente está consultando o banco e recebendo os dados antes de retornar.
 
 ---
 
-### 2. Estrutura de Diretórios e Arquivos
+## 3. Validação e Tratamento de Erros
 
-Outro ponto importante que notei é que seu projeto não possui o arquivo `INSTRUCTIONS.md`, que é obrigatório para a organização esperada do desafio.
+Você fez um ótimo trabalho implementando validações e mensagens de erro personalizadas! 👏 Isso é fundamental para uma API profissional.
 
-Além disso, seu arquivo de migration está nomeado com a extensão `.js.js`:
+Porém, como as funções do repositório não estão sendo aguardadas (await), o fluxo de erros não está funcionando corretamente, já que o controller recebe Promises ao invés dos dados reais.
 
-```
-db/migrations/20250810162131_solution_migrations.js.js
-```
-
-Isso pode causar problemas na hora de executar as migrations, pois o Knex espera arquivos `.js`.
-
-**Sugestão:**
-
-- Renomeie o arquivo para:
-
-```
-db/migrations/20250810162131_solution_migrations.js
-```
-
-- Crie o arquivo `INSTRUCTIONS.md` na raiz do projeto, mesmo que seja um arquivo simples com as instruções básicas, pois ele é esperado na estrutura.
-
-Manter a estrutura correta ajuda a evitar erros na hora de rodar comandos como `knex migrate:latest` e `knex seed:run`.
+Ao corrigir o uso de `async/await` no controller, seu tratamento de erros vai funcionar como esperado, e os status HTTP 400 e 404 serão retornados corretamente.
 
 ---
 
-### 3. Uso da Migration: Tipo do Campo ID
+## 4. Migrations e Seeds
 
-Na sua migration, você criou as tabelas assim:
+Eu vi que você criou a migration para as tabelas `agentes` e `casos` e os seeds para popular os dados iniciais. Isso é ótimo! 👍
 
-```js
-.createTable('agentes', function(table) {
-  table.increments('id');
-  table.string('nome').notNullable();
-  table.date('dataDeIncorporacao').notNullable();
-  table.string('cargo').notNullable();
-})
+Mas para que esses dados realmente existam no banco, você precisa:
+
+- Executar as migrations com o comando:
+
+```bash
+npx knex migrate:latest
 ```
 
-E no seed, você insere agentes com `id` numérico (1, 2, etc). Porém, no código do controller, você está usando `uuid` para gerar IDs, que são strings:
+- Executar os seeds com o comando:
+
+```bash
+npx knex seed:run
+```
+
+Além disso, certifique-se que seu arquivo `.env` esteja configurado corretamente com as variáveis `POSTGRES_USER`, `POSTGRES_PASSWORD` e `POSTGRES_DB`, pois seu `knexfile.js` depende delas para conectar ao banco.
+
+Se o banco não estiver rodando (por exemplo, via Docker), ou as migrations/seeds não tiverem sido executadas, suas queries vão falhar.
+
+---
+
+## 5. Sobre o Docker e o Banco de Dados
+
+Vi que você tem um `docker-compose.yml` para o PostgreSQL, mas ele está incompleto — falta a parte do `version` e o serviço do app Node.js para integrar.
+
+Além disso, para garantir que o banco esteja ativo, rode:
+
+```bash
+docker-compose up -d
+```
+
+E verifique se o container está rodando com:
+
+```bash
+docker ps
+```
+
+Se o banco não estiver acessível, o Knex não vai conseguir fazer as queries, e sua API vai falhar silenciosamente.
+
+---
+
+## 6. Exemplos de Correção no Controller
+
+Aqui vai um exemplo de como ajustar seu `agentesController.js` para usar async/await corretamente:
 
 ```js
+const agentesRepository = require('../repositories/agentesRepository')
+const errorResponse = require('../utils/errorHandler')
 const { v4: uuidv4 } = require('uuid');
 
-const novoAgente = {
-  id: uuidv4(),
-  nome,
-  cargo,
-  dataDeIncorporacao: data.toISOString().split('T')[0],
-};
-```
-
-Isso gera um conflito, porque:
-
-- No banco, o campo `id` é auto-increment (inteiro).
-- No código, você está tentando inserir um `id` do tipo string UUID.
-
-**Isso pode gerar erros na inserção ou busca dos dados.**
-
----
-
-### Como resolver?
-
-Você tem duas opções:
-
-1. **Mudar o campo `id` para ser UUID no banco:**
-
-Na migration, defina o campo `id` como string e gere o UUID no código:
-
-```js
-table.uuid('id').primary().defaultTo(knex.raw('uuid_generate_v4()'));
-```
-
-Mas para isso, o banco precisa ter a extensão `uuid-ossp` habilitada.
-
-2. **Ou manter o `id` como auto-increment e gerar o ID no banco:**
-
-Remova o `id` do objeto criado no código e deixe o banco gerar o ID:
-
-```js
-const novoAgente = {
-  nome,
-  cargo,
-  dataDeIncorporacao: data.toISOString().split('T')[0],
-};
-const [id] = await db('agentes').insert(novoAgente).returning('id');
-```
-
-E retorne o objeto com o ID gerado.
-
----
-
-### 4. Uso correto do async/await nos Controllers
-
-Se você alterar as funções do repositório para serem assíncronas, lembre-se de atualizar os controllers para usar `async` e `await`. Por exemplo:
-
-```js
 async function getAgentes(req, res) {
-  try {
-    let agentes = await agentesRepository.findAll();
+    try {
+        let agentes = await agentesRepository.findAll();
 
-    // o resto do código
-  } catch (error) {
-    return errorResponse(res, 500, "Erro interno no servidor");
-  }
+        if (!agentes) {
+            return errorResponse(res, 500, "Erro ao buscar agentes.");
+        }
+
+        const cargo = req.query.cargo;
+        const sort = req.query.sort;
+
+        if (cargo) {
+            agentes = agentes.filter(a => a.cargo === cargo);
+
+            if (agentes.length === 0) {
+                return errorResponse(res, 404, `Agentes com cargo "${cargo}" não encontrados.`);
+            }
+        }
+
+        if (sort === 'dataDeIncorporacao') {
+            agentes.sort((a, b) => new Date(a.dataDeIncorporacao) - new Date(b.dataDeIncorporacao));
+        } else if (sort === '-dataDeIncorporacao') {
+            agentes.sort((a, b) => new Date(b.dataDeIncorporacao) - new Date(a.dataDeIncorporacao));
+        }
+
+        res.status(200).json(agentes);
+    } catch (err) {
+        console.error(err);
+        errorResponse(res, 500, "Erro interno do servidor.");
+    }
 }
+
+async function getAgenteById(req, res) {
+    try {
+        const agenteId = req.params.id;
+        const agente = await agentesRepository.findById(agenteId);
+
+        if (!agente) {
+            return errorResponse(res, 404, "Agente não encontrado");
+        }
+        res.status(200).json(agente);
+    } catch (err) {
+        console.error(err);
+        errorResponse(res, 500, "Erro interno do servidor.");
+    }
+}
+
+// E assim por diante para os outros métodos...
 ```
 
-Sem isso, seu código pode retornar promessas não resolvidas, ou dados incorretos.
+---
+
+## 7. Recomendações de Aprendizado para você crescer ainda mais 🚀
+
+- Para entender melhor o uso do Knex com async/await e como fazer migrations e seeds corretamente, veja este guia oficial do Knex.js:  
+  https://knexjs.org/guide/migrations.html  
+  https://knexjs.org/guide/query-builder.html
+
+- Para configurar o banco de dados PostgreSQL com Docker e conectar ao Node.js, este vídeo é excelente:  
+  http://googleusercontent.com/youtube.com/docker-postgresql-node
+
+- Para entender melhor como funciona o fluxo de requisições e respostas no Express, incluindo status codes e tratamento de erros, recomendo:  
+  https://youtu.be/RSZHvQomeKE
+
+- Para validar dados e tratar erros 400 e 404 com excelência, dê uma olhada neste conteúdo:  
+  https://developer.mozilla.org/pt-BR/docs/Web/HTTP/Status/400  
+  https://developer.mozilla.org/pt-BR/docs/Web/HTTP/Status/404
 
 ---
 
-### 5. Sobre a busca e filtragem de agentes por data de incorporação e ordenação
+## 8. Resumo Rápido para Você Focar Agora ✅
 
-Você implementou a filtragem e ordenação no controller com manipulação direta de arrays:
+- ⚠️ **Use `async/await` ao chamar funções assíncronas do repositório nos controllers!** Isso é fundamental para que os dados do banco sejam realmente acessados e manipulados.
 
-```js
-if (sort === 'dataDeIncorporacao') {
-  agentes.sort((a, b) => { ... });
-}
-```
+- 📂 **Inclua o arquivo `INSTRUCTIONS.md`** e ajuste seu `.gitignore` para ignorar `node_modules`.
 
-Mas, se você migrar para o banco, o ideal é fazer essa ordenação diretamente na query SQL via Knex, para melhor performance e consistência:
+- 🐳 **Confirme que seu banco PostgreSQL está rodando e que as migrations e seeds foram executadas** para que as tabelas e dados existam.
 
-```js
-let query = db('agentes');
+- 💡 **Ajuste os métodos do repositório para usar `await` nas queries e retorne `null` ao invés de `false` quando não encontrar dados.**
 
-if (cargo) {
-  query = query.where('cargo', cargo);
-}
-
-if (sort === 'dataDeIncorporacao') {
-  query = query.orderBy('dataDeIncorporacao', 'asc');
-} else if (sort === '-dataDeIncorporacao') {
-  query = query.orderBy('dataDeIncorporacao', 'desc');
-}
-
-const agentes = await query.select('*');
-```
+- 🔄 **Revise o tratamento de erros para funcionar corretamente após corrigir o fluxo assíncrono.**
 
 ---
 
-### 6. Penalidades detectadas
+fonteBean, você já tem uma base muito boa e está caminhando para construir uma API completa e profissional! 🎯 Com esses ajustes na conexão com o banco e no uso do async/await, seu projeto vai funcionar direitinho e você vai conseguir todos os status e funcionalidades esperados.
 
-- Seu `.gitignore` não está ignorando a pasta `node_modules`. Isso pode poluir seu repositório com arquivos desnecessários.
-- A estrutura de arquivos não está exatamente conforme a especificação do desafio.
+Continue firme, conte comigo para o que precisar, e bora detonar essa etapa! 💪🚀
 
-Corrigir isso ajuda a manter seu projeto limpo e organizado. 😉
-
----
-
-## Recursos para você aprofundar e corrigir esses pontos:
-
-- **Configuração de Banco de Dados com Docker e Knex:**
-
-  - [Vídeo explicativo sobre Docker + PostgreSQL + Node.js](http://googleusercontent.com/youtube.com/docker-postgresql-node)
-  - [Documentação oficial do Knex.js sobre migrations](https://knexjs.org/guide/migrations.html)
-  - [Guia do Knex Query Builder](https://knexjs.org/guide/query-builder.html)
-  - [Vídeo sobre seeds com Knex](http://googleusercontent.com/youtube.com/knex-seeds)
-
-- **Refatoração e Boas Práticas:**
-
-  - [Arquitetura MVC para Node.js](https://youtu.be/bGN_xNc4A1k?si=Nj38J_8RpgsdQ-QH)
-  - [Refatoração de código Node.js](http://googleusercontent.com/youtube.com/refatoracao-nodejs)
-
-- **Manipulação de Requisições e Respostas HTTP:**
-
-  - [HTTP Status Codes e Express.js](https://youtu.be/RSZHvQomeKE)
-  - [Entendendo o protocolo HTTP](https://youtu.be/RSZHvQomeKE?si=caHW7Ra1ce0iHg8)
-
-- **Validação de Dados e Tratamento de Erros:**
-
-  - [HTTP 400 Bad Request](https://developer.mozilla.org/pt-BR/docs/Web/HTTP/Status/400)
-  - [HTTP 404 Not Found](https://developer.mozilla.org/pt-BR/docs/Web/HTTP/Status/404)
-  - [Validação de dados em APIs Node.js](https://youtu.be/yNDCRAz7CM8?si=Lh5u3j27j_a4w3A_)
-
----
-
-## Resumo rápido para você focar:
-
-- 🚦 **Conecte seu repositório ao banco de dados usando Knex de verdade:** remova arrays estáticos e implemente funções `async` com `await` para manipular dados no PostgreSQL.
-- 🗂️ **Corrija a estrutura de arquivos:** renomeie sua migration (`.js.js` → `.js`) e crie o arquivo `INSTRUCTIONS.md`.
-- 🔢 **Defina o tipo do campo `id` de forma consistente:** escolha entre UUID ou auto-increment no banco e ajuste o código para gerar/usar o ID corretamente.
-- ⚡ **Atualize seus controllers para funções assíncronas com `async/await`** para lidar corretamente com chamadas ao banco.
-- 📊 **Implemente filtros e ordenação diretamente nas queries Knex, não com manipulação de arrays em memória.**
-- 🚫 **Atualize seu `.gitignore` para ignorar `node_modules` e mantenha o repositório limpo.**
-
----
-
-fonteBean, você está no caminho certo! O que falta é dar o passo fundamental para usar o banco de dados de verdade, e isso vai destravar diversas funcionalidades e corrigir vários erros de uma só vez. 💡
-
-Se precisar, volte aos recursos que indiquei e vá implementando passo a passo. Estou aqui torcendo pelo seu sucesso e disponível para ajudar! 💙✨
-
-Bora lá que você consegue! 🚀👊
-
-Um abraço do seu Code Buddy! 🤖💬
+Um abraço e até a próxima revisão! 🤗👨‍💻✨
 
 > Caso queira tirar uma dúvida específica, entre em contato com o Chapter no nosso [discord](https://discord.gg/DryuHVnz).
 

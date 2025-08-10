@@ -1,6 +1,6 @@
 <sup>Esse é um feedback gerado por IA, ele pode conter erros.</sup>
 
-Você tem 6 créditos restantes para usar o sistema de feedback AI.
+Você tem 5 créditos restantes para usar o sistema de feedback AI.
 
 # Feedback para fonteBean:
 
@@ -8,17 +8,17 @@ Nota final: **2.3/100**
 
 Olá, fonteBean! 👋🚀
 
-Primeiramente, parabéns pelo empenho em avançar na construção dessa API REST com Express.js, PostgreSQL e Knex.js! 🎉 Você já conseguiu implementar a criação de agentes e casos, além de validar bastante os dados de entrada, o que é essencial para garantir a qualidade da sua API. Também vi que você organizou seu código em controllers, repositories e rotas, o que é um ótimo passo para manter a modularidade. Além disso, você implementou algumas validações e erros customizados, o que mostra preocupação com a experiência do usuário da sua API — isso é muito valioso! 👍
+Primeiramente, quero te parabenizar por todo o esforço e pelo que você já conseguiu entregar até aqui! 🎉 Você implementou a criação de agentes e casos, além de ter cuidado com validações e tratamento de erros, o que já é uma base muito importante para uma API REST robusta. Também notei que você conseguiu implementar alguns extras, como filtros de busca, mensagens de erro customizadas e endpoints de busca por agente responsável — isso mostra que você está indo além do básico, e isso é incrível! 👏✨
 
 ---
 
-## Vamos juntos entender os pontos que podem ser melhorados e que estão impactando o funcionamento da sua aplicação.
+## Vamos conversar sobre alguns pontos que podem te ajudar a destravar e subir sua nota? 🕵️‍♂️💡
 
-### 1. Estrutura do projeto e arquivos obrigatórios
+### 1. Estrutura do Projeto e Arquivos Obrigatórios
 
-Eu percebi que o arquivo **INSTRUCTIONS.md** não está presente no seu repositório, e ele é obrigatório para o desafio. Além disso, sua estrutura de diretórios está muito próxima do esperado, mas é fundamental seguir exatamente o padrão para que a organização do projeto fique clara e para que tudo funcione conforme o esperado.
+Percebi que o arquivo `INSTRUCTIONS.md` está faltando no seu repositório. Esse arquivo é obrigatório para que a estrutura do seu projeto esteja completa e para garantir que a equipe de avaliação consiga entender o que foi feito.
 
-Aqui está a estrutura que você deve ter:
+Além disso, a estrutura de pastas e arquivos deve seguir exatamente o padrão esperado. Olha só a estrutura que esperamos:
 
 ```
 📦 SEU-REPOSITÓRIO
@@ -49,116 +49,76 @@ Aqui está a estrutura que você deve ter:
     └── errorHandler.js
 ```
 
-A ausência do INSTRUCTIONS.md pode causar problemas na avaliação e também indica que você não completou uma parte essencial do projeto. Além disso, a organização precisa seguir esse padrão para facilitar a manutenção e entendimento do código.
+Verifique se todos esses arquivos e pastas estão presentes e exatamente nomeados. Se estiver diferente, isso pode causar problemas na execução da sua aplicação e impactar diretamente nos resultados. 
 
 ---
 
-### 2. Configuração do banco de dados e conexão com Knex
+### 2. Configuração do Banco de Dados e Conexão com o Knex
 
-Você fez um ótimo trabalho configurando o `knexfile.js` e o arquivo `db/db.js` para criar a conexão com o banco de dados. Porém, é muito importante garantir que as variáveis de ambiente estejam corretamente configuradas e que o banco esteja rodando.
+Eu dei uma boa olhada no seu `knexfile.js` e no arquivo de conexão `db/db.js`. A configuração parece estar correta, mas um ponto fundamental é: **você tem um arquivo `.env` com as variáveis `POSTGRES_USER`, `POSTGRES_PASSWORD` e `POSTGRES_DB` configurados corretamente?**
 
-Vi que você tem um arquivo `docker-compose.yml` para rodar o PostgreSQL, mas não encontrei o arquivo `.env` no seu projeto. Isso pode ser um problema fundamental, pois o Knex depende dessas variáveis para se conectar ao banco:
+Outro detalhe importante: no seu `docker-compose.yml`, você expõe a porta 5432 e define as variáveis de ambiente, mas só isso não garante que o banco esteja rodando e aceitando conexões. Você chegou a rodar as migrations para criar as tabelas `agentes` e `casos` no banco? Isso é imprescindível para que suas queries funcionem.
 
-```js
-// knexfile.js
-connection: {
-  host: '127.0.0.1',
-  port: 5432,
-  user: process.env.POSTGRES_USER,
-  password: process.env.POSTGRES_PASSWORD,
-  database: process.env.POSTGRES_DB,
-},
+⚠️ Sem as tabelas criadas, suas funções no repositório que fazem consultas ao banco vão falhar silenciosamente ou retornar dados vazios, o que explica porque muitos endpoints não funcionam.
+
+Se ainda não fez, execute:
+
+```bash
+npx knex migrate:latest
+npx knex seed:run
 ```
 
-Sem o `.env` com essas variáveis definidas, o Knex não consegue se conectar ao banco, o que vai impedir qualquer operação de leitura ou escrita. Isso explicaria por que várias funcionalidades de leitura, atualização e deleção não funcionam.
+Isso vai criar as tabelas e inserir os dados iniciais para você testar.
 
-**Dica:** Crie um arquivo `.env` na raiz do seu projeto com o conteúdo parecido com:
-
-```
-POSTGRES_USER=seu_usuario
-POSTGRES_PASSWORD=sua_senha
-POSTGRES_DB=nome_do_banco
-```
-
-E lembre-se de **não subir o `.env` para o repositório** (adicione no `.gitignore`), pois ele contém dados sensíveis.
-
-Para entender melhor como configurar o banco com Docker e conectar ao Node.js com Knex, recomendo fortemente que você assista este vídeo:  
-👉 [Configuração de Banco de Dados com Docker e Knex](http://googleusercontent.com/youtube.com/docker-postgresql-node)  
-E também dê uma olhada na documentação oficial do Knex sobre migrations para garantir que suas tabelas estejam criadas corretamente:  
-👉 [Knex Migrations Guide](https://knexjs.org/guide/migrations.html)
+Recomendo fortemente que você veja este recurso para entender como configurar o banco PostgreSQL com Docker e Knex.js:  
+📺 [Configuração de Banco de Dados com Docker e Knex](http://googleusercontent.com/youtube.com/docker-postgresql-node)  
+📚 [Documentação oficial do Knex.js - Migrations](https://knexjs.org/guide/migrations.html)
 
 ---
 
-### 3. Migrations e Seeds — Garantindo que o banco esteja pronto
+### 3. Repositórios e Retorno de Dados
 
-Você criou uma migration que cria as tabelas `agentes` e `casos` com os campos corretos, o que é ótimo! Só é importante garantir que essa migration tenha sido executada com sucesso no seu banco.
+Notei que em alguns lugares você está retornando o objeto original enviado para criação, em vez do objeto retornado pelo banco após inserção ou atualização.
 
-Exemplo do seu migration:
-
-```js
-exports.up = function(knex) {
-  return knex.schema
-    .createTable('agentes', function(table) {
-      table.increments('id');
-      table.string('nome').notNullable();
-      table.date('dataDeIncorporacao').notNullable();
-      table.string('cargo').notNullable();
-    })
-    .createTable('casos', function(table) {
-      table.increments('id');
-      table.string('titulo').notNullable();
-      table.text('descricao').notNullable();
-      table.enu('status', ['aberto', 'solucionado']).notNullable().defaultTo('aberto');
-      table.integer('agente_id').unsigned().notNullable();
-      table.foreign('agente_id').references('agentes.id');
-    });
-};
-```
-
-Se as tabelas não existirem no banco, suas queries Knex vão falhar silenciosamente ou retornar resultados vazios, o que explica porque vários endpoints não retornam dados.
-
-Além disso, seus seeds estão bem escritos para popular as tabelas, mas eles só vão funcionar se as migrations tiverem sido executadas antes.
-
-**Passos para garantir:**
-
-- Execute `knex migrate:latest` para criar as tabelas.
-- Execute `knex seed:run` para popular as tabelas.
-- Verifique diretamente no banco se as tabelas e dados existem.
-
-Se não estiver familiarizado com esses comandos, dê uma olhada aqui:  
-👉 [Knex Migrations e Seeds](https://knexjs.org/guide/migrations.html)  
-👉 [Knex Seeds (vídeo)](http://googleusercontent.com/youtube.com/knex-seeds)
-
----
-
-### 4. Implementação dos Repositories — Retorno correto dos dados
-
-Nos seus repositórios, por exemplo em `agentesRepository.js`, notei um detalhe importante que pode estar atrapalhando a atualização e criação:
+Por exemplo, no `casosRepository.js`, na função `criarCaso`:
 
 ```js
-async function criarAgente(agente) {
+async function criarCaso(caso){
   try{
-    const query =  await db("agentes").insert(agente, ["*"]);
+    const [query] = await db("casos").insert(caso).returning('*');
     if(!query){
-      return false;
+      return false
     }
-    return agente
+    return caso  // <-- aqui deveria retornar 'query', não 'caso'
   }catch(err){
-    console.log(err)
+    console.log(err);
     return false
   }
 }
 ```
 
-Aqui, você retorna o objeto `agente` que foi passado, mas o ideal é retornar o resultado da inserção que o Knex retorna, pois ele traz o registro criado com o ID gerado pelo banco.
-
-Sugestão de correção:
+O ideal é retornar o objeto que o banco retornou, pois ele pode conter o `id` gerado automaticamente e outros dados que foram efetivamente salvos:
 
 ```js
-async function criarAgente(agente) {
+return query;
+```
+
+O mesmo vale para o método `createAgente` no `agentesRepository.js`, que já está correto, mas é importante manter esse padrão em todos os lugares.
+
+---
+
+### 4. Tratamento de Atualizações (PUT e PATCH)
+
+No seu `casosRepository.js`, a função `updateCaso` está retornando assim:
+
+```js
+async function updateCaso(id, dadosAtualizados) {
   try {
-    const [novoAgente] = await db("agentes").insert(agente).returning('*');
-    return novoAgente;
+    const [updated] = await db('casos').where({ id }).update(dadosAtualizados).returning('*');
+    if (!updated || updated.length === 0) {
+      return false;
+    }
+    return updated[0];
   } catch (err) {
     console.log(err);
     return false;
@@ -166,85 +126,87 @@ async function criarAgente(agente) {
 }
 ```
 
-O mesmo vale para `criarCaso` e métodos de update: sempre retorne o resultado do banco para garantir que o objeto retornado tenha o ID correto e os dados atualizados.
+Aqui, `updated` já é o objeto atualizado (pois você desestruturou o primeiro item do array com `[updated]`), então `updated[0]` não existe e pode causar erro.
 
-Isso ajuda a evitar inconsistências e facilita o controle das respostas no controller.
+O correto seria simplesmente:
+
+```js
+return updated;
+```
+
+Isso pode estar causando falhas nos endpoints que atualizam casos e agentes.
 
 ---
 
-### 5. Controllers — Atualização parcial (PATCH) e completa (PUT)
+### 5. Validação e Filtros no Controller
 
-No controller de casos (`casosController.js`), percebi alguns pontos que podem causar falhas:
+No `casosController.js`, ao filtrar casos por `status` ou `agente_id`, você está buscando todos os casos e depois filtrando em memória:
 
 ```js
-async function patchCaso(req, res) {
-  const { id } = req.params.id; // Aqui está errado!
+const casos = await casosRepository.findAll();
+
+if(status){
+  const casosStatus = casos.filter(c=> c.status == status);
+  // ...
+}
+
+if(agente_id){
+  const casosAgente  = casos.filter(c => c.agente_id === Number(agente_id));
   // ...
 }
 ```
 
-O problema aqui é que você está tentando desestruturar `id` de `req.params.id`, mas `req.params.id` já é uma string (ex: "1"), não um objeto. Isso fará com que `id` fique `undefined`, e suas queries usarão `undefined` como id.
-
-Correção:
-
-```js
-async function patchCaso(req, res) {
-  const id = req.params.id;
-  // resto do código
-}
-```
-
-Esse tipo de erro causa falhas silenciosas e pode explicar por que as atualizações parciais não funcionam corretamente.
+Isso pode funcionar para poucos dados, mas não é eficiente nem escalável. O ideal é fazer a filtragem direto na query do banco, criando funções específicas no `casosRepository.js` para buscar casos filtrados por status ou agente_id. Isso evita sobrecarregar a aplicação e melhora a performance.
 
 ---
 
-### 6. Validação e tratamento de erros
+### 6. Penalidades e Boas Práticas
 
-Você fez um ótimo trabalho implementando validações para campos obrigatórios e formatos de data, o que é excelente! Isso garante que sua API seja robusta e evite dados inválidos.
+Vi que o `.gitignore` não está ignorando a pasta `node_modules`, e que o arquivo `.env` está presente no repositório. Isso é perigoso porque pode expor suas credenciais e aumentar o tamanho do repositório.
 
-Só fique atento para sempre utilizar o mesmo padrão de retorno de erro para facilitar o consumo da API. Você já usa a função `errorResponse` para isso, o que é ótimo!
-
----
-
-### 7. Penalidades e boas práticas
-
-- Vi que seu `.gitignore` não está ignorando a pasta `node_modules`. Isso pode poluir seu repositório com arquivos desnecessários e deixar o projeto pesado.  
-  **Dica:** Inclua `node_modules/` no `.gitignore`.
-
-- Também notei que o arquivo `.env` está presente no repositório. Como ele contém informações sensíveis, o ideal é que ele **não** seja enviado para o GitHub.  
-  **Dica:** Remova o `.env` do repositório e adicione-o ao `.gitignore`. Para compartilhar variáveis de ambiente, você pode criar um arquivo `.env.example` com os nomes das variáveis, mas sem os valores.
+⚠️ Sempre inclua `node_modules` no `.gitignore` e nunca suba arquivos `.env` para o GitHub.
 
 ---
 
-## Recursos para você aprofundar e corrigir esses pontos:
+## Recapitulando e Próximos Passos 📝
+
+- ✅ Parabéns pelas implementações de criação, validação e tratamento de erros, além dos filtros e buscas extras. Isso mostra comprometimento!  
+- ⚠️ Falta o arquivo `INSTRUCTIONS.md` e atenção à estrutura do projeto.  
+- ⚠️ Confirme se as migrations foram executadas para criar as tabelas no banco. Sem isso, nada funcionará.  
+- ⚠️ Ajuste os retornos dos métodos de criação e atualização para retornar os dados corretos do banco (exemplo: retornar `query` e não o objeto enviado).  
+- ⚠️ Corrija o retorno na função `updateCaso` para não tentar acessar `updated[0]` depois de desestruturar.  
+- ⚠️ Melhore a filtragem de dados para ser feita direto no banco, não na memória.  
+- ⚠️ Atualize seu `.gitignore` para ignorar `node_modules` e remova o `.env` do repositório.  
+
+---
+
+## Recursos para te ajudar a avançar 🚀
 
 - [Configuração de Banco de Dados com Docker e Knex](http://googleusercontent.com/youtube.com/docker-postgresql-node)  
-- [Knex Migrations Guide](https://knexjs.org/guide/migrations.html)  
-- [Knex Query Builder](https://knexjs.org/guide/query-builder.html)  
-- [Knex Seeds (vídeo)](http://googleusercontent.com/youtube.com/knex-seeds)  
+- [Documentação oficial do Knex.js - Migrations](https://knexjs.org/guide/migrations.html)  
+- [Documentação oficial do Knex.js - Query Builder](https://knexjs.org/guide/query-builder.html)  
 - [Arquitetura MVC em Node.js](https://youtu.be/bGN_xNc4A1k?si=Nj38J_8RpgsdQ-QH)  
-- [Validação de dados em APIs Node.js/Express](https://youtu.be/yNDCRAz7CM8?si=Lh5u3j27j_a4w3A_)  
-- [Status HTTP 400 e 404 - MDN](https://developer.mozilla.org/pt-BR/docs/Web/HTTP/Status/400) | [Status 404 - MDN](https://developer.mozilla.org/pt-BR/docs/Web/HTTP/Status/404)
+- [Validação de dados e tratamento de erros em APIs Node.js](https://youtu.be/yNDCRAz7CM8?si=Lh5u3j27j_a4w3A_)  
+- [HTTP Status Codes e boas práticas](https://developer.mozilla.org/pt-BR/docs/Web/HTTP/Status/400) e (https://developer.mozilla.org/pt-BR/docs/Web/HTTP/Status/404)  
 
 ---
 
-## Resumo dos principais pontos para focar:
+## Resumo rápido para você focar 🎯
 
-- [ ] Criar e adicionar o arquivo **INSTRUCTIONS.md** na raiz do projeto.  
-- [ ] Garantir que o arquivo `.env` exista localmente, com as variáveis corretas, e que não esteja no repositório.  
-- [ ] Executar corretamente as migrations e seeds para criar e popular as tabelas no banco PostgreSQL.  
-- [ ] Corrigir o retorno dos dados nos métodos de criação e atualização dos repositories para retornar o registro atualizado/criado do banco (usar `.returning('*')`).  
-- [ ] Ajustar a desestruturação incorreta do `id` em `patchCaso` (e revisar se há outros lugares com erro parecido).  
-- [ ] Atualizar o `.gitignore` para ignorar a pasta `node_modules`.  
-- [ ] Verificar se o banco está rodando e acessível, para evitar erros silenciosos de conexão.  
+- 📁 Ajuste a estrutura do projeto e inclua o arquivo `INSTRUCTIONS.md`.  
+- 🛠️ Execute as migrations e seeds para garantir que as tabelas existam no banco.  
+- 🔄 Corrija os retornos dos métodos no repositório para retornar os dados do banco, não os objetos enviados.  
+- 🐞 Ajuste o retorno da função `updateCaso` para evitar acessar índice inexistente.  
+- 🔍 Faça filtros diretamente no banco, não na memória.  
+- 🚫 Atualize `.gitignore` para ignorar `node_modules` e retire `.env` do repositório.  
 
 ---
 
-fonteBean, você está no caminho certo e já tem uma base muito boa! 💪 Com essas correções, sua API vai ficar mais robusta, confiável e pronta para uso real. Continue praticando, revisando seu código e buscando entender cada detalhe da conexão com o banco e das operações que você realiza.
+fonteBean, você está no caminho certo e com ajustes pontuais e foco nas bases (estrutura, banco de dados e retornos corretos), sua API vai funcionar perfeitamente e você vai conseguir a nota que merece! 💪✨
 
-Se precisar de ajuda para entender algum desses pontos em detalhes, me avise! Estou aqui para te ajudar a destravar tudo isso e fazer seu projeto brilhar! 🌟
+Continue firme, conte comigo para o que precisar! 🚨👮‍♂️💻
 
-Um abraço e bons códigos! 👨‍💻👩‍💻✨
+Abraço forte! 🤗💙
 
 > Caso queira tirar uma dúvida específica, entre em contato com o Chapter no nosso [discord](https://discord.gg/DryuHVnz).
 

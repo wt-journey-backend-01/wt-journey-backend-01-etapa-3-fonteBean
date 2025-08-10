@@ -142,7 +142,7 @@ async function updateCaso(req, res) {
 }
 
 async function patchCaso(req, res) {
-  const { id } = req.params.id;
+  const id  = req.params.id;
   const { titulo, descricao, status, agente_id } = req.body;
 
   const dadosParaAtualizar = {};

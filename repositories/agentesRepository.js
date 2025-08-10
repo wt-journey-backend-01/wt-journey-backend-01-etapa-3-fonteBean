@@ -27,21 +27,19 @@ async function findById(id) {
 
 
 async function criarAgente(agente) {
-  try{
-    const query =  await db("agentes").insert(agente, ["*"]);
-    if(!query){
-      return false;
-    }
-    return agente
-  }catch(err){
-    console.log(err)
-    return false
+  try {
+    const [novoAgente] = await db("agentes").insert(agente).returning('*');
+    return novoAgente;
+  } catch (err) {
+    console.log(err);
+    return false;
   }
 }
 
+
 async function updateAgente(id,dadosAtualizados) {
   try{
-    const query = await db("agentes").where({id:id}).update(dadosAtualizados, ["*"]);
+    const query = await db("agentes").where({id:id}).update(dadosAtualizados).returning('*');
     if(!query){
       return false;
     }

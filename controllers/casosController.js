@@ -86,11 +86,11 @@ async function createCaso(req,res){
       status,
       agente_id
     }
-   const create =await casosRepository.criarCaso(novoCaso);
-   if(!create){
+  const create = await casosRepository.criarCaso(novoCaso);
+  if(!create){
     return errorResponse(res,400,"Erro ao criar caso");
-   }
-   res.status(201).json(novoCaso) 
+  }
+  res.status(201).json(create[0]);
 }
 
 async function deleteCaso(req,res){
@@ -138,7 +138,7 @@ async function updateCaso(req, res) {
   if(!update){
     return errorResponse(res,400,"Erro ao atualizar caso");
   }
-  res.status(200).json(caso);
+  res.status(200).json(update[0]);
 }
 
 async function patchCaso(req, res) {
@@ -179,7 +179,8 @@ async function patchCaso(req, res) {
   if(!casoAtualizado){
     return errorResponse(res,400,"Erro ao atualizar caso")
   }
-  res.status(200).json(casoAtualizado);
+
+  res.status(200).json(casoAtualizado[0]);
 }
 
 module.exports = {

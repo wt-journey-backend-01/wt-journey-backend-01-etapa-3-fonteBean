@@ -77,7 +77,7 @@ async function createAgente(req, res) {
     return errorResponse(res,400,"Erro ao criar agente");
   }
   
-  res.status(201).json(create);
+  res.status(201).json(create[0]);
 }
 
 async function updateAgente(req, res) {
@@ -151,7 +151,11 @@ async function patchAgente(req, res) {
     agente.dataDeIncorporacao = data.toISOString().split('T')[0];
   }
 
-  res.status(200).json(agente);
+  const agenteAtualizado = await agentesRepository.updateAgente(agenteId, dadosParaAtualizar);
+  if (!agenteAtualizado) {
+    return errorResponse(res, 404, "Agente não encontrado.");
+  }
+  res.status(200).json(agenteAtualizado[0]);
 }
 
 

@@ -19,10 +19,32 @@ const agentes = [
     "cargo": "escrivão"
   }
 ];
+const db = require("../db/db")
 
-function findAll(){
-  return agentes;
+
+async function findAll() {
+    try{
+      const agentes =  db("agentes").select("*");
+      return agentes;
+    }catch(err){
+      console.log(err);
+      return false  ;
+   }
 }
+
+
+async function findById(id) {
+    try{
+      const agente = db("agentes").where({id: id}).first();
+      if(!agente) return false;
+      
+      return agente
+    }catch(err){
+      console.log(err);
+      return false;
+   }
+}
+
 function findById(id) {
   const agente = agentes.find(a => a.id === id);
   return agente;

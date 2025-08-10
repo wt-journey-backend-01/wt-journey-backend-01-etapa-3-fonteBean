@@ -3,7 +3,7 @@ const db = require("../db/db")
 
 async function findAll() {
     try{
-      const agentes =  db("agentes").select("*");
+      const agentes = await db("agentes").select("*");
       return agentes;
     }catch(err){
       console.log(err);
@@ -14,7 +14,7 @@ async function findAll() {
 
 async function findById(id) {
     try{
-      const agente = db("agentes").where({id: id}).first();
+      const agente = await db("agentes").where({id: id}).first();
       if(!agente) return false;
       
       return agente

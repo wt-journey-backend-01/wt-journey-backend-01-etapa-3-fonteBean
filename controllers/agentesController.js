@@ -1,12 +1,12 @@
 const agentesRepository = require('../repositories/agentesRepository')
 const errorResponse = require('../utils/errorHandler')
 const express = require('express');
-const { v4: uuidv4 } = require('uuid');
 
 
 
-function getAgentes(req, res) {
-    let agentes = agentesRepository.findAll();
+
+async function getAgentes(req, res) {
+    let agentes =  await agentesRepository.findAll();
 
     const cargo = req.query.cargo;
     const sort = req.query.sort;
@@ -36,9 +36,9 @@ function getAgentes(req, res) {
     res.status(200).json(agentes);
 }
 
-function getAgenteById(req,res){
+async function getAgenteById(req,res){
   const agenteId = req.params.id;
-  const agente = agentesRepository.findById(agenteId);
+  const agente = await agentesRepository.findById(agenteId);
   if(!agente){
        return errorResponse(res,404,"Agente nao encontrado");
     }
@@ -48,7 +48,7 @@ function getAgenteById(req,res){
 
 
 
-function createAgente(req, res) {
+async function createAgente(req, res) {
   const { nome, cargo, dataDeIncorporacao } = req.body;
 
   if (!nome || !cargo || !dataDeIncorporacao) {
@@ -67,17 +67,19 @@ function createAgente(req, res) {
   }
 
   const novoAgente = {
-    id: uuidv4(),
     nome,
     cargo,
     dataDeIncorporacao: data.toISOString().split('T')[0],
   };
 
-  agentesRepository.criarAgente(novoAgente);
+  const create =  await agentesRepository.criarAgente(novoAgente);
+  if(!create){
+    return errorResponse(res,400,"Erro ao criar agente");
+  }
   res.status(201).json(novoAgente);
 }
 
-function updateAgente(req, res) {
+async function updateAgente(req, res) {
   const agenteId = req.params.id;
   const { nome, cargo, dataDeIncorporacao } = req.body;
 
@@ -100,7 +102,7 @@ function updateAgente(req, res) {
     return errorResponse(res,400,"Data de incorporação não pode ser no futuro.");
   }
 
-  const agenteAtualizado = agentesRepository.updateAgente(agenteId, {
+  const agenteAtualizado = await agentesRepository.updateAgente(agenteId, {
     nome,
     cargo,
     dataDeIncorporacao: data.toISOString().split('T')[0],
@@ -114,7 +116,7 @@ function updateAgente(req, res) {
 }
 
 
-function patchAgente(req, res) {
+async function patchAgente(req, res) {
   const agenteId = req.params.id;
   const { nome, cargo, dataDeIncorporacao } = req.body;
 
@@ -125,7 +127,7 @@ function patchAgente(req, res) {
     return errorResponse(res,400,"Nenhum campo válido para atualização foi enviado.");
   }
 
-  const agente = agentesRepository.findById(agenteId);
+  const agente =  await agentesRepository.findById(agenteId);
   if (!agente) {
     return errorResponse(res,404,"Agente não encontrado.");
   }
@@ -152,10 +154,10 @@ function patchAgente(req, res) {
 }
 
 
-function deleteAgente(req,res){
+async function deleteAgente(req,res){
   const agenteId =req.params.id;
     
-  const sucesso = agentesRepository.deleteAgente(agenteId);
+  const sucesso = await agentesRepository.deleteAgente(agenteId);
   if(!sucesso){
     return errorResponse(res,404,`Error ao deletar ${agenteId}`)
   }

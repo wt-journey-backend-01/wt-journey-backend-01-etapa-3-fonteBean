@@ -32,7 +32,7 @@ async function criarCaso(caso){
     if(!query){
       return false
     }
-    return caso
+    return query
   }catch(err){
     console.log(err);
     return false
@@ -70,7 +70,7 @@ async function updateCaso(id, dadosAtualizados) {
     if (!updated || updated.length === 0) {
       return false;
     }
-    return updated[0];
+    return updated;
   } catch (err) {
     console.log(err);
     return false;

@@ -1,34 +1,35 @@
 /**
  * @param { import("knex").Knex } knex
- * @returns { Promise<void> } 
+ * @returns { Promise<void> }
  */
 
-exports.seed = function(knex) {
-  return knex('casos').del()
-    .then(function() {
-      return knex('casos').insert([
-        {
-          id: 1,
-          titulo: 'Roubo à joalheria',
-          descricao: 'Uma joalheria no centro da cidade foi assaltada na última noite. As câmeras de segurança foram desativadas e não há testemunhas.',
-          status: 'aberto',
-          agente_id: 1
-        },
-        {
-          id: 2,
-          titulo: 'Desaparecimento de pessoa',
-          descricao: 'Fulano de Tal, 35 anos, desapareceu após sair de casa para trabalhar. Seu carro foi encontrado abandonado na rodovia.',
-          status: 'aberto',
-          agente_id: 2
-        },
-        {
-          id: 3,
-          titulo: 'Fraude financeira',
-          descricao: 'Um grande esquema de fraude foi descoberto em uma empresa multinacional. O valor desviado pode chegar a milhões de reais.',
-          status: 'solucionado',
-          agente_id: 2
-        },
-      ]);
-    });
-};
+exports.seed = async function (knex) {
+  await knex("casos").del();
 
+  await knex("casos").insert([
+    {
+      titulo: "Roubo de Dados",
+      descricao: "A empresa de tecnologia 'Innovatech' reportou uma invasão aos seus servidores e o roubo de dados de clientes.",
+      status: "aberto",
+      agente_id: 1,
+    },
+    {
+      titulo: "Falsificação de Obras de Arte",
+      descricao: "Um colecionador de arte denunciou que as pinturas de sua galeria, avaliadas em milhões, são falsificações.",
+      status: "aberto",
+      agente_id: 2,
+    },
+    {
+      titulo: "Incêndio Suspeito",
+      descricao: "Um grande incêndio destruiu o armazém da 'Logística Rápida'. A causa ainda é desconhecida, mas há indícios de sabotagem.",
+      status: "solucionado",
+      agente_id: 1,
+    },
+    {
+      titulo: "Tráfico de Influência",
+      descricao: "Vazou um áudio onde políticos e empresários discutem a venda de favores e licitações públicas.",
+      status: "solucionado",
+      agente_id: 2,
+    },
+  ]);
+};

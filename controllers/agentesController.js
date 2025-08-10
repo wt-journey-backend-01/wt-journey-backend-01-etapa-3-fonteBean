@@ -132,13 +132,10 @@ async function patchAgente(req, res) {
   if (!agente) {
     return errorResponse(res,404,"Agente não encontrado.");
   }
-
-  if (nome !== undefined) { 
-    agente.nome = nome;
-  }
-  if (cargo !== undefined) {
-    agente.cargo = cargo;
-  }
+  const dadosParaAtualizar = {};
+  if (nome !== undefined) dadosParaAtualizar.nome = nome;
+  if (cargo !== undefined) dadosParaAtualizar.cargo = cargo;
+ 
   if (dataDeIncorporacao !== undefined) {
     const data = new Date(dataDeIncorporacao);
     const agora = new Date();
@@ -148,7 +145,7 @@ async function patchAgente(req, res) {
     if (data > agora) {
       return errorResponse(res,400,"Data de incorporação não pode ser no futuro.");
     }
-    agente.dataDeIncorporacao = data.toISOString().split('T')[0];
+     dadosParaAtualizar.dataDeIncorporacao = data.toISOString().split('T')[0];
   }
 
   const agenteAtualizado = await agentesRepository.updateAgente(agenteId, dadosParaAtualizar);

@@ -28,5 +28,7 @@ exports.up = function (knex) {
  */
 
 exports.down = function (knex) {
-  return knex.schema.dropTable("casos").dropTable("agentes");
+  return knex.schema
+    .dropTable("casos")
+    .then(() => knex.schema.dropTable("agentes"));
 };

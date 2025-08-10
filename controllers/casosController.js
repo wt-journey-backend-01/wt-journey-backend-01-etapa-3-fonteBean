@@ -136,7 +136,7 @@ async function updateCaso(req, res) {
    agente_id
   })
   if(!update){
-    return errorResponse(res,400,"Erro ao atualizar caso");
+    return errorResponse(res,404,"Erro ao atualizar caso");
   }
   res.status(200).json(update[0]);
 }

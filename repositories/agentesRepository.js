@@ -40,9 +40,9 @@ async function criarAgente(agente) {
 async function updateAgente(id,dadosAtualizados) {
   try{
     const query = await db("agentes").where({id:id}).update(dadosAtualizados).returning('*');
-    if(!query){
-      return false;
-    }
+    if (!query || query.length === 0) {
+  return false;
+}
     return query
   }catch(err) {
     console.log(err);

@@ -1,3 +1,4 @@
+const { pathToRegexp } = require("path-to-regexp");
 const db = require("../db/db")
 
 async function findAll(){
@@ -63,11 +64,30 @@ async function buscaPalavraEmCaso(palavraChave) {
   return casosFiltrados;
 }
 
+async function updateCaso(id, dadosAtualizados) {
+  try {
+    const updated = await db('casos').where({ id }).update(dadosAtualizados, ['*']);
+    if (!updated || updated.length === 0) {
+      return false;
+    }
+    return updated[0];
+  } catch (err) {
+    console.log(err);
+    return false;
+  }
+}
+
+async function patchCaso(id, dadosParaAtualizar) {
+  return updateCaso(id, dadosParaAtualizar); 
+}
+
 
 module.exports  = {
   findAll,
   findById,
   criarCaso,
   deleteCaso,
-  buscaPalavraEmCaso
+  buscaPalavraEmCaso,
+  updateCaso,
+  patchCaso
 }

@@ -1,6 +1,7 @@
 const casosRepository = require("../repositories/casosRepository.js")
 const agentesRepository = require("../repositories/agentesRepository.js")
-const errorResponse = require("../utils/errorHandler.js")
+const errorResponse = require("../utils/errorHandler.js");
+const db = require("../db/db.js");
 
 
 async function getCasos(req,res){
@@ -20,7 +21,7 @@ async function getCasos(req,res){
   }
 
   if(agente_id){
-    const casosAgente  = casos.filter(c => c.agente_id === agente_id)
+    const casosAgente  = casos.filter(c => c.agente_id === Number(agente_id))
     if(casosAgente.length === 0){
       return errorResponse(res,404,`Casos do agente ${agente_id}, nao encontrados`)
     }
@@ -45,7 +46,7 @@ async function getAgentebyCaso(req,res){
   if(!caso){
    return  errorResponse(res,404,"caso nao encontrado")
   }
-  const agente = agentesRepository.findById(caso.agente_id)
+  const agente = await agentesRepository.findById(caso.agente_id)
   if(!agente){
    return errorResponse(res,404,"Agente nao encontrado")
   }
@@ -75,7 +76,7 @@ async function createCaso(req,res){
     {
    return  errorResponse(res,400,"Status nao permitido ")
     }
-  const agente = agentesRepository.findById(agente_id);
+  const agente = await agentesRepository.findById(agente_id);
   if (!agente) {
     return errorResponse(res,404,"Agente não encontrado para o agente_id fornecido");
   }
@@ -112,7 +113,7 @@ async function updateCaso(req, res) {
     return errorResponse(res,400,"Todos os campos são obrigatórios para atualização completa.");
   }
 
-  const caso = casosRepository.findById(casoId);
+  const caso = await casosRepository.findById(casoId);
   if (!caso) {
     return errorResponse(res,404,"caso não encontrado.");
   }
@@ -173,15 +174,11 @@ async function patchCaso(req, res) {
   if (Object.keys(dadosParaAtualizar).length === 0) {
     return errorResponse(res,400,"Nenhum dado válido fornecido para atualização." );
   }
-
-  const casosAtualizados = await knex('casos').where({ id: id }).update(dadosParaAtualizar);
-
-  if (casosAtualizados === 0) {
-    return res.status(404).json({ error: "Caso não encontrado." });
-  }
   
   const casoAtualizado = await casosRepository.patchCaso(id,dadosParaAtualizar);
-
+  if(!casoAtualizado){
+    return errorResponse(res,400,"Erro ao atualizar caso")
+  }
   res.status(200).json(casoAtualizado);
 }
 

@@ -76,7 +76,8 @@ async function createAgente(req, res) {
   if(!create){
     return errorResponse(res,400,"Erro ao criar agente");
   }
-  res.status(201).json(novoAgente);
+  
+  res.status(201).json(create);
 }
 
 async function updateAgente(req, res) {

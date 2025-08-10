@@ -28,7 +28,7 @@ async function findById(id) {
 
 async function criarAgente(agente) {
   try {
-    const [novoAgente] = await db("agentes").insert(agente).returning('*');
+    const novoAgente = await db("agentes").insert(agente).returning('*');
     return novoAgente;
   } catch (err) {
     console.log(err);
@@ -43,7 +43,7 @@ async function updateAgente(id,dadosAtualizados) {
     if(!query){
       return false;
     }
-    return query[0]
+    return query
   }catch(err) {
     console.log(err);
     return false 

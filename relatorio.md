@@ -1,58 +1,242 @@
 <sup>Esse é um feedback gerado por IA, ele pode conter erros.</sup>
 
-Você tem 3 créditos restantes para usar o sistema de feedback AI.
+Você tem 2 créditos restantes para usar o sistema de feedback AI.
 
 # Feedback para fonteBean:
 
-Nota final: **16.9/100**
+Nota final: **85.6/100**
 
 Olá, fonteBean! 👋🚀
 
-Primeiramente, parabéns pelo esforço em migrar sua API para usar PostgreSQL com Knex.js! 🎉 Migrar de um armazenamento em memória para um banco de dados real não é tarefa simples, e você já deu passos importantes ao estruturar seu projeto com controllers, repositories e rotas. Isso mostra que você está no caminho certo para construir uma API robusta e escalável.
+Primeiramente, parabéns pelo esforço e dedicação em migrar sua API para usar PostgreSQL com Knex.js! 🎉 Você conseguiu implementar várias funcionalidades essenciais e ainda entregou alguns extras que vão além do básico, como a filtragem de casos por status e por agente, o que é muito legal! Isso mostra que você está indo além e explorando o que a API pode oferecer. Vamos juntos entender onde podemos melhorar para deixar tudo tinindo? 😉
 
 ---
 
-## 🎯 O que você já mandou bem
+## 🎯 O que você mandou muito bem
 
-- Sua organização modular está bem encaminhada: você separou controllers, repositories e rotas, o que é uma prática excelente para manter o código limpo e fácil de manter.
-- Você implementou validações de dados e retornos de status HTTP apropriados em vários pontos, cuidando para não aceitar dados inválidos e retornando mensagens claras de erro.
-- O uso do Knex nas repositories para as operações básicas (`select`, `insert`, `update`, `delete`) está presente e você já entende o fluxo das queries.
-- Você também criou seeds para popular as tabelas com dados iniciais, o que é ótimo para testes e desenvolvimento.
-- Além disso, você implementou funcionalidades extras como filtros por status, busca por palavra-chave e endpoints para buscar o agente responsável por um caso — isso mostra iniciativa e vontade de entregar algo além do básico! 👏
+- Sua estrutura de pastas está organizada e modularizada, com controllers, repositories, routes e utils bem separados — isso é fundamental para um projeto escalável e fácil de manter. 👏
+- O uso do Knex para as queries está consistente e você fez um bom tratamento de erros com mensagens personalizadas, o que torna sua API mais amigável para quem consome.
+- Você implementou corretamente os métodos REST para os recursos `/agentes` e `/casos` com validações e retornos de status HTTP adequados.
+- Os seeds estão populando as tabelas com dados iniciais, e as migrations criam as tabelas com as colunas e relacionamentos certos.
+- Os filtros simples para casos por status e agente funcionam bem, e você já fez a integração entre casos e agentes, buscando o agente responsável pelo caso.
 
 ---
 
-## 🔍 Onde precisamos ajustar para destravar sua API
+## 🔍 Pontos de atenção e sugestões para melhorar (vamos destrinchar!)
 
-### 1. **Conexão com o Banco de Dados e Configuração do Knex**
+### 1. Atualização completa e parcial de agentes (PUT e PATCH) não estão funcionando corretamente
 
-Ao analisar seu código, percebi que a configuração do Knex parece correta no arquivo `knexfile.js` e no `db/db.js`. Você está usando variáveis de ambiente para usuário, senha e banco, o que é ótimo para segurança.
+No seu `agentesController.js`, especialmente na função `patchAgente`, notei um problema que pode estar causando falhas nos endpoints de atualização parcial:
 
-Porém, um ponto crítico que pode estar impedindo o funcionamento correto da persistência é a ausência do arquivo `.env` no repositório (ou a presença indevida dele, que gerou penalidade). Sem o `.env` corretamente configurado, as variáveis `POSTGRES_USER`, `POSTGRES_PASSWORD` e `POSTGRES_DB` ficarão `undefined` e a conexão com o banco falhará.
+```js
+async function patchAgente(req, res) {
+  // ...
+  // Você atualiza o objeto agente localmente:
+  if (nome !== undefined) { 
+    agente.nome = nome;
+  }
+  if (cargo !== undefined) {
+    agente.cargo = cargo;
+  }
+  if (dataDeIncorporacao !== undefined) {
+    // validação da data...
+    agente.dataDeIncorporacao = data.toISOString().split('T')[0];
+  }
 
-**Por que isso é importante?**  
-Se o banco não conecta, nenhuma query vai funcionar. Isso explica porque operações básicas como criar, listar e atualizar agentes e casos não funcionam.
+  // Mas aqui você chama updateAgente com uma variável que não existe:
+  const agenteAtualizado = await agentesRepository.updateAgente(agenteId, dadosParaAtualizar);
+  // 'dadosParaAtualizar' não foi declarada nem preenchida em lugar algum!
+  // Isso provavelmente gera erro ou atualiza com dados errados.
 
-**O que fazer?**  
-- Garanta que o arquivo `.env` exista na raiz do projeto e contenha as variáveis corretas, por exemplo:
-
-```env
-POSTGRES_USER=seu_usuario
-POSTGRES_PASSWORD=sua_senha
-POSTGRES_DB=seu_banco
+  if (!agenteAtualizado) {
+    return errorResponse(res, 404, "Agente não encontrado.");
+  }
+  res.status(200).json(agenteAtualizado[0]);
+}
 ```
 
-- Certifique-se de que o `.env` não está sendo versionado no `.gitignore` para evitar expor credenciais.
-- Revise o `docker-compose.yml` para garantir que as variáveis estejam sendo passadas corretamente para o container do PostgreSQL.
+**O que está acontecendo?**  
+Você atualiza o objeto `agente` localmente, mas na hora de enviar os dados para o repositório, você deveria montar um objeto com os campos que vão ser atualizados, algo como:
 
-Se quiser, recomendo muito este vídeo para entender melhor como configurar o ambiente com Docker e Knex:  
-👉 http://googleusercontent.com/youtube.com/docker-postgresql-node
+```js
+const dadosParaAtualizar = {};
+if (nome !== undefined) dadosParaAtualizar.nome = nome;
+if (cargo !== undefined) dadosParaAtualizar.cargo = cargo;
+if (dataDeIncorporacao !== undefined) dadosParaAtualizar.dataDeIncorporacao = data.toISOString().split('T')[0];
+```
+
+E aí passar esse `dadosParaAtualizar` para o repositório. No seu código, você modificou o objeto `agente` mas não criou esse objeto para atualizar no banco, e está passando uma variável inexistente.
+
+Isso causa falha no update e impede que a alteração parcial funcione como esperado.
 
 ---
 
-### 2. **Migrations: Criação e Rollback das Tabelas**
+### 2. Atualização completa (PUT) de agente também falha para agentes inexistentes
 
-Seu arquivo de migration está quase perfeito, mas tem um detalhe importante no `exports.down`:
+No método `updateAgente` do controller, você faz a atualização assim:
+
+```js
+const agenteAtualizado = await agentesRepository.updateAgente(agenteId, {
+  nome,
+  cargo,
+  dataDeIncorporacao: data.toISOString().split('T')[0],
+});
+if (!agenteAtualizado) {
+  return errorResponse(res,404,"Agente não encontrado.");
+}
+```
+
+No seu repositório:
+
+```js
+async function updateAgente(id,dadosAtualizados) {
+  try{
+    const query = await db("agentes").where({id:id}).update(dadosAtualizados).returning('*');
+    if(!query){
+      return false;
+    }
+    return query
+  }catch(err) {
+    console.log(err);
+    return false 
+  }
+}
+```
+
+O problema aqui é que o Knex retorna um array vazio se não encontrou o registro para atualizar, e arrays vazios são truthy em JavaScript. Então o teste `if(!query)` não vai funcionar como esperado, porque `![]` é `false`.
+
+Você deveria verificar se o array retornado tem elementos, assim:
+
+```js
+if (!query || query.length === 0) {
+  return false;
+}
+```
+
+Isso vai garantir que, se o registro não existir, a função retorne `false` e o controller possa enviar o 404 corretamente.
+
+---
+
+### 3. O mesmo vale para a atualização parcial (PATCH) de casos
+
+No seu `casosController.js`, na função `patchCaso`, você chama:
+
+```js
+const casoAtualizado = await casosRepository.patchCaso(id,dadosParaAtualizar);
+if(!casoAtualizado){
+  return errorResponse(res,400,"Erro ao atualizar caso")
+}
+res.status(200).json(casoAtualizado[0]);
+```
+
+E no repositório:
+
+```js
+async function updateCaso(id, dadosAtualizados) {
+  try {
+    const updated = await db('casos').where({ id }).update(dadosAtualizados).returning('*');
+    if (!updated || updated.length === 0) {
+      return false;
+    }
+    return updated;
+  } catch (err) {
+    console.log(err);
+    return false;
+  }
+}
+
+async function patchCaso(id, dadosParaAtualizar) {
+  return updateCaso(id, dadosParaAtualizar); 
+}
+```
+
+Aqui você fez certo ao verificar `updated.length === 0`, mas no controller você retorna erro 400 para falha, quando o correto seria 404 se o caso não existir. Para manter padrão, no controller, ao receber `false` do repositório, você deve retornar:
+
+```js
+return errorResponse(res, 404, "Caso não encontrado.");
+```
+
+Assim o cliente entende que o recurso não existe.
+
+---
+
+### 4. Falha na busca e filtro de agentes por data de incorporação com ordenação
+
+Você implementou o filtro por `cargo` e ordenação por `dataDeIncorporacao` no controller de agentes assim:
+
+```js
+if (sort === 'dataDeIncorporacao') {
+  agentes.sort((a, b) => {
+    if (a.dataDeIncorporacao < b.dataDeIncorporacao) return -1;
+    if (a.dataDeIncorporacao > b.dataDeIncorporacao) return 1;
+    return 0;
+  });
+} else if (sort === '-dataDeIncorporacao') {
+  agentes.sort((a, b) => {
+    if (a.dataDeIncorporacao > b.dataDeIncorporacao) return -1;
+    if (a.dataDeIncorporacao < b.dataDeIncorporacao) return 1;
+    return 0;
+  });
+}
+```
+
+O problema é que você está fazendo o filtro e ordenação **na aplicação**, sobre o array retornado do banco. Isso funciona, mas não é eficiente nem escalável, e pode causar problemas se o banco retornar dados em formato diferente (ex: datas como objetos Date ou strings).
+
+O ideal é fazer o filtro e ordenação diretamente na query SQL via Knex, no repositório, assim:
+
+```js
+async function findAll({ cargo, sort }) {
+  let query = db('agentes');
+
+  if (cargo) {
+    query = query.where('cargo', cargo);
+  }
+
+  if (sort === 'dataDeIncorporacao') {
+    query = query.orderBy('dataDeIncorporacao', 'asc');
+  } else if (sort === '-dataDeIncorporacao') {
+    query = query.orderBy('dataDeIncorporacao', 'desc');
+  }
+
+  const agentes = await query.select('*');
+  return agentes;
+}
+```
+
+E no controller, você só passa os parâmetros para o repositório, que retorna já filtrado e ordenado.
+
+Isso melhora performance, evita erros e deixa o código mais limpo.
+
+---
+
+### 5. Erros customizados para argumentos inválidos de agentes e casos
+
+Percebi que você já implementou mensagens personalizadas para erros 400 e 404, o que é ótimo! Porém, alguns erros customizados para filtros e buscas específicas (como agente por data de incorporação ou busca por palavras-chave em casos) não estão 100%.
+
+Por exemplo, na busca por palavra-chave no caso (`searchEmCaso`), você retorna 404 se não encontrar, mas o parâmetro de busca `q` não é validado para vazio corretamente:
+
+```js
+const busca = req.query.q ? req.query.q.toLowerCase() : ""
+if(!busca){
+  return errorResponse(res,404,"Parametro de busca nao encontrado")
+}
+```
+
+Aqui, se `q` for uma string vazia, `busca` será `""` e `!busca` será `true`, o que está certo, mas seria mais claro validar assim:
+
+```js
+if (!req.query.q || req.query.q.trim() === "") {
+  return errorResponse(res, 400, "Parâmetro de busca 'q' é obrigatório.");
+}
+```
+
+Além disso, para o endpoint que busca o agente responsável por um caso, você já tem a rota e controller, mas o teste bônus falha indicando que talvez a implementação não esteja completa ou com algum detalhe faltando — revise se o caminho `/casos/:id/agente` está devidamente registrado e se o controller está retornando o agente correto com status 200.
+
+---
+
+### 6. Pequena inconsistência na migration para o método `down`
+
+No seu arquivo de migration:
 
 ```js
 exports.down = function (knex) {
@@ -60,179 +244,65 @@ exports.down = function (knex) {
 };
 ```
 
-O problema aqui é que o método `dropTable` do Knex não pode ser encadeado assim diretamente. Você precisa retornar uma Promise que faça o drop das tabelas em sequência, por exemplo:
+O Knex não permite encadear dois `dropTable` assim, pois cada retorna uma Promise. O correto é fazer:
 
 ```js
 exports.down = function (knex) {
   return knex.schema
-    .dropTableIfExists("casos")
-    .then(() => knex.schema.dropTableIfExists("agentes"));
+    .dropTable("casos")
+    .then(() => knex.schema.dropTable("agentes"));
 };
 ```
 
-Além disso, use `dropTableIfExists` para evitar erros caso a tabela não exista.
+Ou usar `async/await`:
 
-**Por que isso importa?**  
-Se o rollback das migrations não funcionar, você terá problemas para manter o banco limpo durante o desenvolvimento e testes.
+```js
+exports.down = async function (knex) {
+  await knex.schema.dropTable("casos");
+  await knex.schema.dropTable("agentes");
+};
+```
 
-Para entender melhor sobre migrations, veja a documentação oficial:  
-👉 https://knexjs.org/guide/migrations.html
+Isso evita erros na hora de rodar rollback das migrations.
 
 ---
 
-### 3. **Seeds: Ordem de Deleção e Inserção**
+## 📚 Recomendações de estudo para você
 
-No seu seed de agentes você faz:
+- Para entender melhor o uso correto do Knex e suas queries, recomendo fortemente este guia oficial:  
+  https://knexjs.org/guide/query-builder.html
 
-```js
-await knex('casos').del()
-await knex("agentes").del();
-```
+- Para aprender a criar e rodar migrations corretamente, veja a documentação oficial do Knex:  
+  https://knexjs.org/guide/migrations.html
 
-E depois insere agentes. Isso está correto, pois `casos` depende de `agentes` pela foreign key. Porém, no seed de casos você só deleta `casos`, o que é correto.
-
-Só fique atento para sempre rodar os seeds na ordem correta: agentes primeiro, depois casos.
-
----
-
-### 4. **Repositories: Retorno dos Métodos `insert` e `update`**
-
-Nos seus repositories, percebi que você está usando `.insert()` e `.update()` com `.returning('*')`, o que é ótimo para receber os dados inseridos/atualizados.
-
-Porém, o retorno dessas operações é um array de objetos, por exemplo:
-
-```js
-const novoAgente = await db("agentes").insert(agente).returning('*');
-// novoAgente é um array, ex: [ { id: 1, nome: "...", ... } ]
-```
-
-No seu controller, ao criar um agente, você faz:
-
-```js
-const create =  await agentesRepository.criarAgente(novoAgente);
-if(!create){
-  return errorResponse(res,400,"Erro ao criar agente");
-}
-
-res.status(201).json(create);
-```
-
-Aqui, você está retornando o array inteiro, mas o ideal é enviar o objeto do novo agente, ou seja, o primeiro elemento do array:
-
-```js
-res.status(201).json(create[0]);
-```
-
-O mesmo vale para update e patch.
-
-**Por que isso é importante?**  
-Se você enviar o array, o cliente pode ficar confuso, e alguns testes podem falhar esperando um objeto.
-
----
-
-### 5. **Controllers: Atualização Parcial dos Agentes**
-
-No método `patchAgente`, você busca o agente, atualiza o objeto em memória, mas **não chama o repository para persistir essas mudanças no banco**:
-
-```js
-if (nome !== undefined) { 
-  agente.nome = nome;
-}
-// ...
-res.status(200).json(agente);
-```
-
-Isso significa que a atualização não está sendo salva no banco, apenas alterando o objeto local.
-
-**Como corrigir?**  
-Você precisa chamar uma função no repository para atualizar o agente com os campos recebidos, como no patchCaso:
-
-```js
-const dadosParaAtualizar = {};
-if (nome !== undefined) dadosParaAtualizar.nome = nome;
-// ... outros campos
-
-const agenteAtualizado = await agentesRepository.updateAgente(agenteId, dadosParaAtualizar);
-if (!agenteAtualizado) {
-  return errorResponse(res, 404, "Agente não encontrado.");
-}
-res.status(200).json(agenteAtualizado[0]);
-```
-
----
-
-### 6. **Controllers: Atualização e Criação de Casos**
-
-No `createCaso` e `updateCaso`, você está validando os dados e verificando o agente, o que é ótimo.
-
-Porém, note que na criação do caso você retorna o objeto `novoCaso` que foi criado, que é o payload enviado, mas não o resultado da inserção no banco (que inclui o `id` gerado):
-
-```js
-res.status(201).json(novoCaso)
-```
-
-O ideal é retornar o resultado do insert:
-
-```js
-const create = await casosRepository.criarCaso(novoCaso);
-if(!create){
-  return errorResponse(res,400,"Erro ao criar caso");
-}
-res.status(201).json(create[0]);
-```
-
-O mesmo vale para update e patch.
-
----
-
-### 7. **Estrutura de Diretórios e Arquivos**
-
-Sua estrutura está muito próxima do esperado, parabéns! 👏
-
-Só um detalhe: o arquivo `INSTRUCTIONS.md` não foi encontrado no seu repositório. Este arquivo é obrigatório pois contém as instruções do desafio e ajuda na organização.
-
-Além disso, vi que você tem o arquivo `.env` na raiz do projeto, o que gerou penalidade. Lembre-se de **não versionar o `.env`** — ele deve estar no `.gitignore` para proteger suas credenciais.
-
----
-
-## 📚 Recursos para você aprofundar e resolver esses pontos
-
-- **Configuração de Banco de Dados com Docker e Knex:**  
-  http://googleusercontent.com/youtube.com/docker-postgresql-node  
-  https://knexjs.org/guide/migrations.html  
-  https://knexjs.org/guide/query-builder.html  
-  http://googleusercontent.com/youtube.com/knex-seeds
-
-- **Refatoração e Arquitetura MVC:**  
-  https://youtu.be/bGN_xNc4A1k?si=Nj38J_8RpgsdQ-QH
-
-- **Manipulação de Requisições e Status Codes no Express:**  
-  https://youtu.be/RSZHvQomeKE
-
-- **Validação de Dados e Tratamento de Erros:**  
-  https://developer.mozilla.org/pt-BR/docs/Web/HTTP/Status/400  
-  https://developer.mozilla.org/pt-BR/docs/Web/HTTP/Status/404  
+- Quer reforçar a parte de validação e tratamento de erros HTTP na API? Este vídeo é ótimo:  
   https://youtu.be/yNDCRAz7CM8?si=Lh5u3j27j_a4w3A_
 
----
+- Se quiser melhorar a organização do seu projeto e entender melhor o padrão MVC aplicado ao Node.js, este conteúdo vai ajudar muito:  
+  https://youtu.be/bGN_xNc4A1k?si=Nj38J_8RpgsdQ-QH
 
-## 📝 Resumo rápido para você focar:
-
-- ✅ Configure corretamente o arquivo `.env` e não o versionar.
-- ✅ Ajuste o `exports.down` da migration para usar `dropTableIfExists` com `.then()`.
-- ✅ Garanta que os seeds sejam executados na ordem certa (agentes antes de casos).
-- ✅ No controller, envie sempre o objeto (ex: `create[0]`) e não o array inteiro.
-- ✅ No `patchAgente`, chame o repository para atualizar o banco, não apenas altere o objeto local.
-- ✅ Inclua o arquivo `INSTRUCTIONS.md` no repositório.
-- ✅ Revise o docker-compose para garantir que as variáveis de ambiente estejam corretas.
+- Para configurar seu banco PostgreSQL com Docker e garantir que a conexão está 100%, assista:  
+  http://googleusercontent.com/youtube.com/docker-postgresql-node
 
 ---
 
-FonteBean, você está no caminho certo! 🚀💪 Essas melhorias vão destravar sua API para funcionar plenamente com o banco PostgreSQL e garantir que todos os endpoints estejam 100% operacionais. Continue firme, com foco nessas correções, e não hesite em usar os recursos que te indiquei para se aprofundar.
+## 🗺️ Resumo rápido para focar nos próximos passos
 
-Se precisar de ajuda para entender qualquer ponto, estou aqui para te ajudar! Vamos juntos nessa jornada de aprendizado! 🌟
+- Corrija a função `patchAgente` para montar o objeto `dadosParaAtualizar` e passar para o repositório, em vez de modificar o objeto `agente` localmente e passar variável inexistente.
+- Ajuste o retorno dos métodos `updateAgente` e `updateCaso` para verificar se o array retornado pelo Knex está vazio e, se sim, retornar `false` para indicar que o registro não foi encontrado.
+- Melhore o filtro e ordenação de agentes movendo a lógica para o repositório, usando query builder do Knex para eficiência e correção.
+- Revise os retornos de erro 400 e 404 para garantir que estão consistentes e adequados para cada situação (ex: busca inválida, recurso inexistente).
+- Corrija a migration para o método `down` usando encadeamento correto de Promises ou `async/await`.
+- Verifique se o endpoint `/casos/:id/agente` está funcionando conforme esperado e retornando o agente correto.
 
-Um abraço de Code Buddy! 🤖💙
+---
+
+fonteBean, você está em um caminho muito bom! 🚀 Com esses ajustes, sua API vai ficar mais robusta, organizada e confiável, e você vai conseguir entregar tudo que o projeto pede, inclusive os bônus! Continue firme, refatorando com calma e testando cada endpoint. Estou aqui torcendo pelo seu sucesso! 💪✨
+
+Se precisar de mais ajuda, só chamar! 😉
+
+Um abraço de mentor,  
+Code Buddy 🤖❤️
 
 > Caso queira tirar uma dúvida específica, entre em contato com o Chapter no nosso [discord](https://discord.gg/DryuHVnz).
 

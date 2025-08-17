@@ -1,79 +1,93 @@
 <sup>Esse é um feedback gerado por IA, ele pode conter erros.</sup>
 
-Você tem 2 créditos restantes para usar o sistema de feedback AI.
+Você tem 1 créditos restantes para usar o sistema de feedback AI.
 
 # Feedback para fonteBean:
 
-Nota final: **85.6/100**
+Nota final: **90.3/100**
 
-Olá, fonteBean! 👋🚀
-
-Primeiramente, parabéns pelo esforço e dedicação em migrar sua API para usar PostgreSQL com Knex.js! 🎉 Você conseguiu implementar várias funcionalidades essenciais e ainda entregou alguns extras que vão além do básico, como a filtragem de casos por status e por agente, o que é muito legal! Isso mostra que você está indo além e explorando o que a API pode oferecer. Vamos juntos entender onde podemos melhorar para deixar tudo tinindo? 😉
+Olá, fonteBean! 👋🚓 Que jornada incrível você está trilhando na modernização da API do Departamento de Polícia, migrando para uma solução com PostgreSQL e Knex.js! Parabéns pelo esforço e dedicação que já te renderam uma nota excelente, 90.3/100! 🎉👏
 
 ---
 
-## 🎯 O que você mandou muito bem
+### 🌟 Primeiramente, vamos celebrar suas conquistas!
 
-- Sua estrutura de pastas está organizada e modularizada, com controllers, repositories, routes e utils bem separados — isso é fundamental para um projeto escalável e fácil de manter. 👏
-- O uso do Knex para as queries está consistente e você fez um bom tratamento de erros com mensagens personalizadas, o que torna sua API mais amigável para quem consome.
-- Você implementou corretamente os métodos REST para os recursos `/agentes` e `/casos` com validações e retornos de status HTTP adequados.
-- Os seeds estão populando as tabelas com dados iniciais, e as migrations criam as tabelas com as colunas e relacionamentos certos.
-- Os filtros simples para casos por status e agente funcionam bem, e você já fez a integração entre casos e agentes, buscando o agente responsável pelo caso.
+Você conseguiu implementar com sucesso várias funcionalidades essenciais:
+
+- A criação, leitura, atualização e deleção (CRUD) de **agentes** e **casos** estão funcionando muito bem.
+- O tratamento de erros para payloads inválidos e recursos inexistentes está bem implementado, garantindo respostas claras e corretas para o cliente.
+- Os endpoints de filtragem simples, como busca por status e por agente, também estão no ponto.
+- Além disso, você avançou nos bônus, como a filtragem por palavras-chave e a ordenação por data de incorporação, o que mostra seu empenho em ir além do básico. 👏✨
 
 ---
 
-## 🔍 Pontos de atenção e sugestões para melhorar (vamos destrinchar!)
+### 🔍 Agora, vamos analisar alguns pontos que podem ser aprimorados para destravar 100% do seu potencial!
 
-### 1. Atualização completa e parcial de agentes (PUT e PATCH) não estão funcionando corretamente
+---
 
-No seu `agentesController.js`, especialmente na função `patchAgente`, notei um problema que pode estar causando falhas nos endpoints de atualização parcial:
+## 1. Falha na criação completa de agentes (POST) e atualização completa com PUT
+
+### O que eu percebi?
+
+Você já tem um ótimo fluxo para criar e atualizar agentes no seu `agentesController.js`. Porém, notei algo importante no método `createAgente`:
 
 ```js
-async function patchAgente(req, res) {
-  // ...
-  // Você atualiza o objeto agente localmente:
-  if (nome !== undefined) { 
-    agente.nome = nome;
-  }
-  if (cargo !== undefined) {
-    agente.cargo = cargo;
-  }
-  if (dataDeIncorporacao !== undefined) {
-    // validação da data...
-    agente.dataDeIncorporacao = data.toISOString().split('T')[0];
-  }
+const create =  await agentesRepository.criarAgente(novoAgente);
+if(!create){
+  return errorResponse(res,400,"Erro ao criar agente");
+}
 
-  // Mas aqui você chama updateAgente com uma variável que não existe:
-  const agenteAtualizado = await agentesRepository.updateAgente(agenteId, dadosParaAtualizar);
-  // 'dadosParaAtualizar' não foi declarada nem preenchida em lugar algum!
-  // Isso provavelmente gera erro ou atualiza com dados errados.
+res.status(201).json(create[0]);
+```
 
-  if (!agenteAtualizado) {
-    return errorResponse(res, 404, "Agente não encontrado.");
+E no repositório:
+
+```js
+async function criarAgente(agente) {
+  try {
+    const novoAgente = await db("agentes").insert(agente).returning('*');
+    return novoAgente;
+  } catch (err) {
+    console.log(err);
+    return false;
   }
-  res.status(200).json(agenteAtualizado[0]);
 }
 ```
 
-**O que está acontecendo?**  
-Você atualiza o objeto `agente` localmente, mas na hora de enviar os dados para o repositório, você deveria montar um objeto com os campos que vão ser atualizados, algo como:
+Aqui, a inserção parece correta, mas o teste indicou falha na criação completa. Isso geralmente ocorre quando o banco rejeita a inserção por algum motivo, como violação de restrições ou formato incorreto dos dados.
+
+### Possível causa raiz:
+
+- **Formato da data `dataDeIncorporacao`**: Você converte a data para `YYYY-MM-DD` com `toISOString().split('T')[0]`, o que é correto, mas é importante garantir que este formato seja aceito pelo PostgreSQL para colunas do tipo `date`.
+- **Migrations e estrutura do banco:** Seu arquivo de migration (`20250810162131_solution_migrations.js`) define a coluna `dataDeIncorporacao` como `table.date("dataDeIncorporacao").notNullable();` — isso está correto.
+- **Verificação da conexão com o banco:** No seu `db/db.js`, a configuração do Knex está correta, mas vale a pena garantir que as variáveis de ambiente estejam devidamente configuradas no `.env` (que não foi enviado), pois se estiverem erradas, nenhuma query funcionará.
+
+### Dica para você:
+
+Faça um teste rápido no seu banco para inserir manualmente um agente com a data no formato `YYYY-MM-DD` para garantir que não há problema com o formato.
+
+Além disso, no seu controller, eu sugiro um tratamento de erro mais detalhado para capturar o erro do banco e facilitar o debug:
 
 ```js
-const dadosParaAtualizar = {};
-if (nome !== undefined) dadosParaAtualizar.nome = nome;
-if (cargo !== undefined) dadosParaAtualizar.cargo = cargo;
-if (dataDeIncorporacao !== undefined) dadosParaAtualizar.dataDeIncorporacao = data.toISOString().split('T')[0];
+try {
+  const create = await agentesRepository.criarAgente(novoAgente);
+  if (!create) {
+    return errorResponse(res, 400, "Erro ao criar agente");
+  }
+  res.status(201).json(create[0]);
+} catch (error) {
+  console.error("Erro ao criar agente:", error);
+  return errorResponse(res, 500, "Erro interno ao criar agente");
+}
 ```
 
-E aí passar esse `dadosParaAtualizar` para o repositório. No seu código, você modificou o objeto `agente` mas não criou esse objeto para atualizar no banco, e está passando uma variável inexistente.
-
-Isso causa falha no update e impede que a alteração parcial funcione como esperado.
+Isso te ajudará a identificar se o erro vem do banco.
 
 ---
 
-### 2. Atualização completa (PUT) de agente também falha para agentes inexistentes
+## 2. Atualização completa de agentes com PUT não funcionando corretamente
 
-No método `updateAgente` do controller, você faz a atualização assim:
+No seu método `updateAgente` no controller, você chama o repositório:
 
 ```js
 const agenteAtualizado = await agentesRepository.updateAgente(agenteId, {
@@ -81,18 +95,15 @@ const agenteAtualizado = await agentesRepository.updateAgente(agenteId, {
   cargo,
   dataDeIncorporacao: data.toISOString().split('T')[0],
 });
-if (!agenteAtualizado) {
-  return errorResponse(res,404,"Agente não encontrado.");
-}
 ```
 
-No seu repositório:
+E no repositório:
 
 ```js
 async function updateAgente(id,dadosAtualizados) {
   try{
     const query = await db("agentes").where({id:id}).update(dadosAtualizados).returning('*');
-    if(!query){
+    if (!query || query.length === 0) {
       return false;
     }
     return query
@@ -103,206 +114,127 @@ async function updateAgente(id,dadosAtualizados) {
 }
 ```
 
-O problema aqui é que o Knex retorna um array vazio se não encontrou o registro para atualizar, e arrays vazios são truthy em JavaScript. Então o teste `if(!query)` não vai funcionar como esperado, porque `![]` é `false`.
+Tudo parece certo, mas o teste indicou falha.
 
-Você deveria verificar se o array retornado tem elementos, assim:
+### Possíveis causas:
+
+- **Verificação da existência do agente antes de atualizar:** Você não verifica explicitamente se o agente existe antes de tentar atualizar. Se o agente não existir, o update retorna vazio e você trata isso com `return false`, o que está correto, mas o teste pode estar esperando uma mensagem ou status específico.
+- **Formato dos dados:** A validação está correta, mas pode ser que a data esteja sendo enviada em formato diferente do esperado.
+- **Retorno do update:** Você retorna `query` que é um array. No controller, você retorna `agenteAtualizado`, que é esse array, mas no patch você retorna `agenteAtualizado[0]`. Para consistência, no PUT também deveria ser `agenteAtualizado[0]`.
+
+### Sugestão para o controller:
 
 ```js
-if (!query || query.length === 0) {
-  return false;
+if (!agenteAtualizado) {
+  return errorResponse(res, 404, "Agente não encontrado.");
 }
+
+res.status(200).json(agenteAtualizado[0]); // Retorna o primeiro elemento do array
 ```
 
-Isso vai garantir que, se o registro não existir, a função retorne `false` e o controller possa enviar o 404 corretamente.
+Assim, o retorno fica consistente com o PATCH e evita confusão para quem consome a API.
 
 ---
 
-### 3. O mesmo vale para a atualização parcial (PATCH) de casos
+## 3. Falha ao atualizar parcialmente um caso inexistente com PATCH
 
-No seu `casosController.js`, na função `patchCaso`, você chama:
+No seu `casosController.js`, o método `patchCaso` está assim:
 
 ```js
 const casoAtualizado = await casosRepository.patchCaso(id,dadosParaAtualizar);
 if(!casoAtualizado){
   return errorResponse(res,400,"Erro ao atualizar caso")
 }
+
 res.status(200).json(casoAtualizado[0]);
 ```
 
-E no repositório:
+Você retorna erro 400 se `casoAtualizado` for falso, mas o correto para recurso inexistente é **404 Not Found**.
+
+Além disso, no repositório:
 
 ```js
-async function updateCaso(id, dadosAtualizados) {
-  try {
-    const updated = await db('casos').where({ id }).update(dadosAtualizados).returning('*');
-    if (!updated || updated.length === 0) {
-      return false;
-    }
-    return updated;
-  } catch (err) {
-    console.log(err);
-    return false;
-  }
-}
-
 async function patchCaso(id, dadosParaAtualizar) {
   return updateCaso(id, dadosParaAtualizar); 
 }
 ```
 
-Aqui você fez certo ao verificar `updated.length === 0`, mas no controller você retorna erro 400 para falha, quando o correto seria 404 se o caso não existir. Para manter padrão, no controller, ao receber `false` do repositório, você deve retornar:
+E `updateCaso` retorna `false` se não encontrar o registro.
+
+### O que ajustar?
+
+No controller, altere para:
 
 ```js
-return errorResponse(res, 404, "Caso não encontrado.");
-```
-
-Assim o cliente entende que o recurso não existe.
-
----
-
-### 4. Falha na busca e filtro de agentes por data de incorporação com ordenação
-
-Você implementou o filtro por `cargo` e ordenação por `dataDeIncorporacao` no controller de agentes assim:
-
-```js
-if (sort === 'dataDeIncorporacao') {
-  agentes.sort((a, b) => {
-    if (a.dataDeIncorporacao < b.dataDeIncorporacao) return -1;
-    if (a.dataDeIncorporacao > b.dataDeIncorporacao) return 1;
-    return 0;
-  });
-} else if (sort === '-dataDeIncorporacao') {
-  agentes.sort((a, b) => {
-    if (a.dataDeIncorporacao > b.dataDeIncorporacao) return -1;
-    if (a.dataDeIncorporacao < b.dataDeIncorporacao) return 1;
-    return 0;
-  });
+if (!casoAtualizado) {
+  return errorResponse(res, 404, "Caso não encontrado.");
 }
 ```
 
-O problema é que você está fazendo o filtro e ordenação **na aplicação**, sobre o array retornado do banco. Isso funciona, mas não é eficiente nem escalável, e pode causar problemas se o banco retornar dados em formato diferente (ex: datas como objetos Date ou strings).
-
-O ideal é fazer o filtro e ordenação diretamente na query SQL via Knex, no repositório, assim:
-
-```js
-async function findAll({ cargo, sort }) {
-  let query = db('agentes');
-
-  if (cargo) {
-    query = query.where('cargo', cargo);
-  }
-
-  if (sort === 'dataDeIncorporacao') {
-    query = query.orderBy('dataDeIncorporacao', 'asc');
-  } else if (sort === '-dataDeIncorporacao') {
-    query = query.orderBy('dataDeIncorporacao', 'desc');
-  }
-
-  const agentes = await query.select('*');
-  return agentes;
-}
-```
-
-E no controller, você só passa os parâmetros para o repositório, que retorna já filtrado e ordenado.
-
-Isso melhora performance, evita erros e deixa o código mais limpo.
+Assim, o status code fica correto para recurso não encontrado.
 
 ---
 
-### 5. Erros customizados para argumentos inválidos de agentes e casos
+## 4. Pontos extras para melhorar a organização e evitar problemas futuros
 
-Percebi que você já implementou mensagens personalizadas para erros 400 e 404, o que é ótimo! Porém, alguns erros customizados para filtros e buscas específicas (como agente por data de incorporação ou busca por palavras-chave em casos) não estão 100%.
+### A. Estrutura do projeto está muito boa!
 
-Por exemplo, na busca por palavra-chave no caso (`searchEmCaso`), você retorna 404 se não encontrar, mas o parâmetro de busca `q` não é validado para vazio corretamente:
+Você seguiu o padrão modular de rotas, controllers, repositories e utils, o que é ótimo para manutenção e escalabilidade. 👏
+
+### B. Atenção ao arquivo `INSTRUCTIONS.md`
+
+Notei que o arquivo `INSTRUCTIONS.md` não está presente no seu repositório, e isso pode causar problemas para quem for rodar seu projeto, pois pode faltar documentação importante.
+
+### C. Verifique se o arquivo `.env` está configurado corretamente
+
+Seu `knexfile.js` depende das variáveis de ambiente:
 
 ```js
-const busca = req.query.q ? req.query.q.toLowerCase() : ""
-if(!busca){
-  return errorResponse(res,404,"Parametro de busca nao encontrado")
-}
+user: process.env.POSTGRES_USER,
+password: process.env.POSTGRES_PASSWORD,
+database: process.env.POSTGRES_DB,
 ```
 
-Aqui, se `q` for uma string vazia, `busca` será `""` e `!busca` será `true`, o que está certo, mas seria mais claro validar assim:
-
-```js
-if (!req.query.q || req.query.q.trim() === "") {
-  return errorResponse(res, 400, "Parâmetro de busca 'q' é obrigatório.");
-}
-```
-
-Além disso, para o endpoint que busca o agente responsável por um caso, você já tem a rota e controller, mas o teste bônus falha indicando que talvez a implementação não esteja completa ou com algum detalhe faltando — revise se o caminho `/casos/:id/agente` está devidamente registrado e se o controller está retornando o agente correto com status 200.
+Sem o arquivo `.env` com essas variáveis, a conexão com o banco falhará, e isso impacta todas as operações que dependem do banco.
 
 ---
 
-### 6. Pequena inconsistência na migration para o método `down`
+### 📚 Recursos que vão te ajudar a destravar esses pontos:
 
-No seu arquivo de migration:
-
-```js
-exports.down = function (knex) {
-  return knex.schema.dropTable("casos").dropTable("agentes");
-};
-```
-
-O Knex não permite encadear dois `dropTable` assim, pois cada retorna uma Promise. O correto é fazer:
-
-```js
-exports.down = function (knex) {
-  return knex.schema
-    .dropTable("casos")
-    .then(() => knex.schema.dropTable("agentes"));
-};
-```
-
-Ou usar `async/await`:
-
-```js
-exports.down = async function (knex) {
-  await knex.schema.dropTable("casos");
-  await knex.schema.dropTable("agentes");
-};
-```
-
-Isso evita erros na hora de rodar rollback das migrations.
-
----
-
-## 📚 Recomendações de estudo para você
-
-- Para entender melhor o uso correto do Knex e suas queries, recomendo fortemente este guia oficial:  
-  https://knexjs.org/guide/query-builder.html
-
-- Para aprender a criar e rodar migrations corretamente, veja a documentação oficial do Knex:  
-  https://knexjs.org/guide/migrations.html
-
-- Quer reforçar a parte de validação e tratamento de erros HTTP na API? Este vídeo é ótimo:  
-  https://youtu.be/yNDCRAz7CM8?si=Lh5u3j27j_a4w3A_
-
-- Se quiser melhorar a organização do seu projeto e entender melhor o padrão MVC aplicado ao Node.js, este conteúdo vai ajudar muito:  
-  https://youtu.be/bGN_xNc4A1k?si=Nj38J_8RpgsdQ-QH
-
-- Para configurar seu banco PostgreSQL com Docker e garantir que a conexão está 100%, assista:  
+- Para garantir que sua configuração do banco com Docker, `.env` e Knex está correta, veja este vídeo super didático:  
   http://googleusercontent.com/youtube.com/docker-postgresql-node
 
+- Para aprofundar nas migrations e entender como versionar seu banco de dados corretamente:  
+  https://knexjs.org/guide/migrations.html
+
+- Para dominar o Knex Query Builder e evitar erros em queries:  
+  https://knexjs.org/guide/query-builder.html
+
+- Para entender melhor como validar dados e tratar erros HTTP na sua API:  
+  https://youtu.be/yNDCRAz7CM8?si=Lh5u3j27j_a4w3A_
+
+- E para organizar seu projeto seguindo a arquitetura MVC e manter o código limpo:  
+  https://youtu.be/bGN_xNc4A1k?si=Nj38J_8RpgsdQ-QH
+
 ---
 
-## 🗺️ Resumo rápido para focar nos próximos passos
+### 📝 Resumo dos principais pontos para focar:
 
-- Corrija a função `patchAgente` para montar o objeto `dadosParaAtualizar` e passar para o repositório, em vez de modificar o objeto `agente` localmente e passar variável inexistente.
-- Ajuste o retorno dos métodos `updateAgente` e `updateCaso` para verificar se o array retornado pelo Knex está vazio e, se sim, retornar `false` para indicar que o registro não foi encontrado.
-- Melhore o filtro e ordenação de agentes movendo a lógica para o repositório, usando query builder do Knex para eficiência e correção.
-- Revise os retornos de erro 400 e 404 para garantir que estão consistentes e adequados para cada situação (ex: busca inválida, recurso inexistente).
-- Corrija a migration para o método `down` usando encadeamento correto de Promises ou `async/await`.
-- Verifique se o endpoint `/casos/:id/agente` está funcionando conforme esperado e retornando o agente correto.
+- **Confirme a configuração do banco de dados:** garanta que seu `.env` está correto e que o container Docker está rodando e acessível.
+- **Trate erros do banco de dados com mais detalhes no controller**, para facilitar debug e evitar respostas genéricas.
+- **Consistência no retorno dos dados:** retorne sempre o objeto atualizado (ex: `update[0]`) para manter padrão entre PUT e PATCH.
+- **Ajuste o status code para 404 ao tentar atualizar um recurso inexistente**, principalmente no PATCH de casos.
+- **Inclua o arquivo `INSTRUCTIONS.md` com instruções claras para rodar o projeto**, isso ajuda qualquer pessoa a entender seu projeto rapidamente.
 
 ---
 
-fonteBean, você está em um caminho muito bom! 🚀 Com esses ajustes, sua API vai ficar mais robusta, organizada e confiável, e você vai conseguir entregar tudo que o projeto pede, inclusive os bônus! Continue firme, refatorando com calma e testando cada endpoint. Estou aqui torcendo pelo seu sucesso! 💪✨
+### Para finalizar, fonteBean...
 
-Se precisar de mais ajuda, só chamar! 😉
+Você está fazendo um trabalho excelente e já entregou uma base sólida para a API do Departamento de Polícia! 🚔💻 Com alguns ajustes finos na validação, tratamento de erros e consistência de respostas, sua aplicação vai ficar ainda mais robusta e profissional.
 
-Um abraço de mentor,  
-Code Buddy 🤖❤️
+Continue assim, aprendendo e evoluindo! Estou aqui para te ajudar sempre que precisar. 🚀✨
+
+Um grande abraço e sucesso no seu código! 👊😄
 
 > Caso queira tirar uma dúvida específica, entre em contato com o Chapter no nosso [discord](https://discord.gg/DryuHVnz).
 
